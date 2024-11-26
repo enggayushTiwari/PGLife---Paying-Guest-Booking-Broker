@@ -46,18 +46,25 @@ $properties = mysqli_fetch_all($result_2, MYSQLI_ASSOC);
     include "includes/header.php";
     ?>
 
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb py-2">
-            <li class="breadcrumb-item">
-                <a href="index.php">Home</a>
-            </li>
-            <li class="breadcrumb-item active" aria-current="page">
-                <?php echo $city_name; ?>
-            </li>
-        </ol>
-    </nav>
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb py-2">
+        <li class="breadcrumb-item">
+            <a href="index.php">Home</a>
+        </li>
+        <li class="breadcrumb-item active" aria-current="page">
+            <?php echo $city_name; ?>
+        </li>
+    </ol>
+</nav>
 
-    <div class="page-container">
+<!-- Add download buttons -->
+<div class="container mb-3">
+    <button class="btn btn-success" onclick="downloadCSV()">Download CSV</button>
+    <button class="btn btn-info" onclick="downloadJSON()">Download JSON</button>
+    <button class="btn btn-warning" onclick="downloadXML()">Download XML</button>
+</div>
+
+<div class="page-container">
         <?php
         foreach ($properties as $property) {
             $property_images = glob("img/properties/" . $property['id'] . "/*");
@@ -136,5 +143,59 @@ $properties = mysqli_fetch_all($result_2, MYSQLI_ASSOC);
     include "includes/login_modal.php";
     include "includes/footer.php";
     ?>
+<script>
+    // Store properties data in JavaScript
+    const propertiesData = <?php echo json_encode($properties); ?>;
+
+    function downloadCSV() {
+        let csvContent = "data:text/csv;charset=utf-8,ID,Name,Address,Gender,Rent,Rating\n";
+        propertiesData.forEach(property => {
+            const rating = ((property.rating_clean + property.rating_food + property.rating_safety) / 3).toFixed(1);
+            csvContent += `${property.id},${property.name},${property.address},${property.gender},${property.rent},${rating}\n`;
+        });
+        
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "properties_<?php echo $city_name; ?>.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function downloadJSON() {
+        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(propertiesData, null, 2));
+        const link = document.createElement("a");
+        link.setAttribute("href", dataStr);
+        link.setAttribute("download", "properties_<?php echo $city_name; ?>.json");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    function downloadXML() {
+        let xmlContent = '<?xml version="1.0" encoding="UTF-8"?>\n<properties>\n';
+        propertiesData.forEach(property => {
+            const rating = ((property.rating_clean + property.rating_food + property.rating_safety) / 3).toFixed(1);
+            xmlContent += `  <property>\n`;
+            xmlContent += `    <id>${property.id}</id>\n`;
+            xmlContent += `    <name>${property.name}</name>\n`;
+            xmlContent += `    <address>${property.address}</address>\n`;
+            xmlContent += `    <gender>${property.gender}</gender>\n`;
+            xmlContent += `    <rent>${property.rent}</rent>\n`;
+            xmlContent += `    <rating>${rating}</rating>\n`;
+            xmlContent += `  </property>\n`;
+        });
+        xmlContent += '</properties>';
+        
+        const dataStr = "data:text/xml;charset=utf-8," + encodeURIComponent(xmlContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", dataStr);
+        link.setAttribute("download", "properties_<?php echo $city_name; ?>.xml");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
 </body>
 </html>

@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Gateway | PG Life</title>
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+        }
+
+        body {
+            background-color: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 2rem;
+            width: 90%;
+            max-width: 800px;
+            margin: 2rem;
+        }
+
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 2rem;
+        }
+
+        .column {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .title {
+            color: #02042a;
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            font-weight: 600;
+        }
+
+        .input-box {
+            margin-bottom: 1.5rem;
+        }
+
+        .input-box span {
+            display: block;
+            color: #666;
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+
+        .input-box input {
+            width: 100%;
+            padding: 0.8rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .input-box input:focus {
+            border-color: #2d7ef8;
+            outline: none;
+        }
+
+        .input-box input[readonly] {
+            background-color: #f8f8f8;
+            color: #666;
+        }
+
+        .flex {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .flex .input-box {
+            flex: 1;
+        }
+
+        .property-details {
+            background-color: #f8fbff;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .amount-display {
+            background-color: #02042a;
+            color: white;
+            padding: 1rem;
+            border-radius: 6px;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+
+        .amount-display .amount {
+            font-size: 2rem;
+            font-weight: bold;
+        }
+
+        .btn {
+            background-color: #2d7ef8;
+            color: white;
+            padding: 1rem 2rem;
+            border: none;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.3s;
+        }
+
+        .btn:hover {
+            background-color: #1a6eeb;
+        }
+
+        .payment-methods {
+            margin-top: 1rem;
+            text-align: center;
+        }
+
+        .payment-methods img {
+            height: 30px;
+            margin: 0 0.5rem;
+            opacity: 0.6;
+        }
+    </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <form id="paymentForm">
+            <div class="row">
+                <div class="column">
+                    <h3 class="title">Billing Details</h3>
+                    <div class="input-box">
+                        <span>Full Name</span>
+                        <input type="text" id="fullName" placeholder="Enter your full name" required>
+                    </div>
+                    <div class="input-box">
+                        <span>Email</span>
+                        <input type="email" id="email" placeholder="Enter your email" required>
+                    </div>
+                    <div class="input-box">
+                        <span>Phone Number</span>
+                        <input type="tel" id="phone" placeholder="Enter your phone number" required>
+                    </div>
+                    <div class="input-box">
+                        <span>Address</span>
+                        <input type="text" id="address" placeholder="Enter your address" required>
+                    </div>
+                </div>
+
+                <div class="column">
+                    <h3 class="title">Property Details</h3>
+                    <div class="property-details">
+                        <div class="input-box">
+                            <span>Property Name</span>
+                            <input type="text" id="propertyName" readonly>
+                        </div>
+                        <div class="input-box">
+                            <span>Property Address</span>
+                            <input type="text" id="propertyAddress" readonly>
+                        </div>
+                    </div>
+
+                    <div class="amount-display">
+                        <span>Amount to Pay</span>
+                        <div class="amount">₹<span id="amountDisplay">0</span></div>
+                    </div>
+
+                    <button type="button" class="btn" id="payButton" onclick="payWithRazorpay()">
+                        Proceed to Payment
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        window.jsPDF = window.jspdf.jsPDF;
+        // Get URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const amount = urlParams.get('amount');
+        const propertyName = urlParams.get('property_name');
+        const propertyAddress = urlParams.get('address');
+
+        // Auto-fill the form
+        document.getElementById('propertyName').value = propertyName;
+        document.getElementById('propertyAddress').value = propertyAddress;
+        document.getElementById('amountDisplay').textContent = amount;
+
+        // Store property details for email
+        const propertyDetails = {
+            name: propertyName,
+            address: propertyAddress,
+            amount: amount
+        };
+
+        async function payWithRazorpay() {
+            const fullName = document.getElementById('fullName').value;
+            const email = document.getElementById('email').value;
+            const phone = document.getElementById('phone').value;
+            
+            if (!fullName || !email || !phone) {
+                alert('Please fill in all required fields');
+                return;
+            }
+
+            const options = {
+                key: 'YOUR_RAZORPAY_KEY', // Replace with your actual Razorpay key
+                amount: amount * 100, // Amount in paise
+                currency: 'INR',
+                name: 'PG Life',
+                description: `Booking payment for ${propertyName}`,
+                handler: async function(response) {
+                    // Send email after successful payment
+                    try {
+                        const emailResponse = await fetch('/send_email', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                fullName,
+                                email,
+                                amount,
+                                propertyName,
+                                propertyAddress,
+                                paymentId: response.razorpay_payment_id
+                            })
+                        });
+                        const result = await emailResponse.json();
+                        alert(result.message);
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Payment successful but failed to send confirmation email');
+                    }
+                },
+                prefill: {
+                    name: fullName,
+                    email: email,
+                    contact: phone
+                },
+                theme: {
+                    color: '#2d7ef8'
+                }
+            };
+
+            const rzp = new Razorpay(options);
+            rzp.open();
+        }
+
+        function generatePDF(paymentId) {
+        const doc = new jsPDF();
+        const fullName = document.getElementById('fullName').value;
+        const email = document.getElementById('email').value;
+        const phone = document.getElementById('phone').value;
+        const address = document.getElementById('address').value;
+        const currentDate = new Date().toLocaleString();
+
+        // Add PG Life header
+        doc.setFontSize(22);
+        doc.setTextColor(45, 126, 248);
+        doc.text('PG Life', 105, 20, { align: 'center' });
+
+        // Add Receipt header
+        doc.setFontSize(18);
+        doc.setTextColor(0, 0, 0);
+        doc.text('Payment Receipt', 105, 30, { align: 'center' });
+
+        // Add line
+        doc.setLineWidth(0.5);
+        doc.line(20, 35, 190, 35);
+
+        // Add customer details
+        doc.setFontSize(12);
+        doc.text(`Date: ${currentDate}`, 20, 50);
+        doc.text(`Payment ID: ${paymentId}`, 20, 60);
+        doc.text(`Customer Name: ${fullName}`, 20, 70);
+        doc.text(`Email: ${email}`, 20, 80);
+        doc.text(`Phone: ${phone}`, 20, 90);
+        doc.text(`Address: ${address}`, 20, 100);
+
+        // Add property details
+        doc.setFontSize(14);
+        doc.text('Property Details', 20, 120);
+        doc.setFontSize(12);
+        doc.text(`Property Name: ${propertyName}`, 20, 130);
+        doc.text(`Property Address: ${propertyAddress}`, 20, 140);
+
+        // Add payment details
+        doc.setFontSize(14);
+        doc.text('Payment Details', 20, 160);
+        doc.setFontSize(12);
+        doc.text(`Amount Paid: ₹${amount}`, 20, 170);
+        doc.text('Payment Status: Successful', 20, 180);
+
+        // Add footer
+        doc.setFontSize(10);
+        doc.text('Thank you for choosing PG Life!', 105, 220, { align: 'center' });
+        doc.text('For any queries, please contact support@pglife.com', 105, 230, { align: 'center' });
+
+        return doc;
+    }
+
+    async function payWithRazorpay() {
+        const fullName = document.getElementById('fullName').value;
+        const email = document.getElementById('email').value;
+        const phone = document.getElementById('phone').value;
+        
+        if (!fullName || !email || !phone) {
+            alert('Please fill in all required fields');
+            return;
+        }
+
+        // Generate a mock payment ID (since we're not using actual Razorpay)
+        const mockPaymentId = 'pay_' + Math.random().toString(36).substr(2, 9);
+
+        try {
+            // Generate PDF
+            const doc = generatePDF(mockPaymentId);
+            
+            // Save PDF
+            const pdfBlob = doc.output('blob');
+            const pdfUrl = URL.createObjectURL(pdfBlob);
+            
+            // Download PDF
+            const link = document.createElement('a');
+            link.href = pdfUrl;
+            link.download = `PGLife_Receipt_${mockPaymentId}.pdf`;
+            link.click();
+
+            // Send email with PDF
+            const formData = new FormData();
+            formData.append('pdf', pdfBlob, `PGLife_Receipt_${mockPaymentId}.pdf`);
+            formData.append('data', JSON.stringify({
+                fullName,
+                email,
+                amount,
+                propertyName,
+                propertyAddress,
+                paymentId: mockPaymentId
+            }));
+
+            const emailResponse = await fetch('/send_email', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await emailResponse.json();
+            alert('Payment successful! Receipt has been downloaded and sent to your email.');
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Error processing payment. Please try again.');
+        }
+    }
+
+    </script>
+</body>
+</html>

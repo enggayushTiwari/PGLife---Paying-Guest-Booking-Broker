@@ -90,7 +90,7 @@ $amenities = mysqli_fetch_all(mysqli_query($conn, $sql_3), MYSQLI_ASSOC);
                 <div class="rent-unit">per month</div>
             </div>
             <div class="button-container col-6">
-    <a href="payment.html" class="btn btn-primary">Book Now</a>
+    <a href="http://127.0.0.1:5000?amount=<?= $property['rent'] ?>&property_name=<?= urlencode($property['property_name']) ?>&address=<?= urlencode($property['address']) ?>" class="btn btn-primary">Book Now</a>
 </div>
 
         </div>

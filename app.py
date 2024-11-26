@@ -2,50 +2,80 @@ from flask import Flask, request, jsonify, render_template
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.mime.application import MIMEApplication
+from datetime import datetime
+import os
+import json
 
-app = Flask(__name__, template_folder='.')
+template_dir = os.path.abspath('templates')
+app = Flask(__name__, template_folder=template_dir)
 
 @app.route('/')
 def index():
-    return render_template('payment.html')  # Use the updated form template
+    amount = request.args.get('amount', '')
+    property_name = request.args.get('property_name', '')
+    address = request.args.get('address', '')
+    return render_template('indexs.html', amount=amount, property_name=property_name, address=address)
 
 @app.route('/send_email', methods=['POST'])
 def send_email_route():
-    data = request.get_json()
-
-    full_name = data['fullName']
-    email = data['email']
-    amount = data['amount']
-
     try:
-        send_email(full_name, email, amount)
+        data = json.loads(request.form['data'])
+        pdf_file = request.files['pdf']
+
+        full_name = data['fullName']
+        email = data['email']
+        amount = data['amount']
+        property_name = data['propertyName']
+        property_address = data['propertyAddress']
+        payment_id = data['paymentId']
+
+        send_email(full_name, email, amount, property_name, property_address, payment_id, pdf_file)
         return jsonify({"success": True, "message": "Email sent successfully."})
     except Exception as e:
         return jsonify({"success": False, "message": f"Error sending email: {str(e)}"})
 
-def send_email(full_name, email, amount):
-    sender_email = "aotiwari_b22@it.vjti.ac.in"  # Replace with your email
-    sender_password = "pkyk inji eplu dfri"  # Replace with your app password
+def send_email(full_name, email, amount, property_name, property_address, payment_id, pdf_file):
+    sender_email = "aotiwari_b22@it.vjti.ac.in"
+    sender_password = "pkyk inji eplu dfri"
     receiver_email = email
 
     msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = receiver_email
-    msg['Subject'] = 'Payment Confirmation'
+    msg['Subject'] = 'PG Life - Booking Confirmation and Receipt'
 
     body = f"""
-    Hello {full_name},
+    Dear {full_name},
 
-    Thank you for your payment of ₹{amount}.
-    Your payment was successful.
+    Thank you for booking with PG Life! Your booking details are as follows:
 
-    Regards,
-    Your Business Name
+    Property Details:
+    - Property Name: {property_name}
+    - Address: {property_address}
+
+    Payment Details:
+    - Amount Paid: ₹{amount}
+    - Payment ID: {payment_id}
+    - Payment Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    - Payment Status: Successful
+
+    Please find your payment receipt attached to this email.
+
+    If you have any questions, please don't hesitate to contact us.
+
+    Best Regards,
+    PG Life Team
     """
     msg.attach(MIMEText(body, 'plain'))
 
+    # Attach PDF
+    pdf_attachment = MIMEApplication(pdf_file.read(), _subtype="pdf")
+    pdf_attachment.add_header('Content-Disposition', 'attachment', filename=f'PGLife_Receipt_{payment_id}.pdf')
+    msg.attach(pdf_attachment)
+
     try:
-        server = smtplib.SMTP('smtp.gmail.com', 587)  # Use Gmail's SMTP server
+        server = smtplib.SMTP('smtp.gmail.com', 587)
         server.starttls()
         server.login(sender_email, sender_password)
         text = msg.as_string()
