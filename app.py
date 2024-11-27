@@ -36,8 +36,8 @@ def send_email_route():
         return jsonify({"success": False, "message": f"Error sending email: {str(e)}"})
 
 def send_email(full_name, email, amount, property_name, property_address, payment_id, pdf_file):
-    sender_email = "aotiwari_b22@it.vjti.ac.in"
-    sender_password = "pkyk inji eplu dfri"
+    sender_email = ""
+    sender_password = ""
     receiver_email = email
 
     msg = MIMEMultipart()
